@@ -5,14 +5,15 @@ from vk_api.utils import get_random_id
 from time import sleep
 from datetime import datetime, timedelta
 from random import choice
-import os
-import sqlite3
 from settings import *
 from questions import *
-import sqlalchemy as db
+from database import *
 
-engine = db.create_engine(db_address)  # создали бдшку по адресу из настроек
-connection = engine.connect()
+db = CharactersDatabase()
+connection = db.get_connection()
+engine = db.get_engine()
+peoples = db.get_peoples()
+messages = db.get_messages()
 
 user = vk_api.VkApi(token=token)
 vk = user.get_api()
@@ -27,11 +28,7 @@ yes_no.add_button('Да, я хочу общаться', color=VkKeyboardColor.PO
 yes_no.add_line()
 yes_no.add_button('Нет, не надо', color=VkKeyboardColor.NEGATIVE)
 
-# Создаем data.db если нету
-# столбцы from_id, about_id, plaintext
-# откого, о ком, текст отзыва
 flag = 0
-
 
 
 def main():
@@ -39,6 +36,7 @@ def main():
 
     try:
         for event in longpoll.listen():
+            print(event)
             if event.type == VkBotEventType.MESSAGE_NEW:
 
                 body = event.object.message['text']
@@ -49,12 +47,11 @@ def main():
                     chatting[current_id].pop(0)
                     they_writing.pop(0)
 
-                    vk.messages.send(peer_id=current_id,
-                                     message="Спасибо за помощь, если хочешь пообщаться еще, то напиши 'Начать'",
-                                     random_id=get_random_id())
-
-                    cur.execute(f"INSERT INTO REVIEW VALUES({current_id}, {to}, '{body}')")
-                    con.commit()
+                    ide = vk.messages.send(peer_id=current_id,
+                                           message="Спасибо за помощь, если хочешь пообщаться еще, то напиши 'Начать'",
+                                           random_id=get_random_id())
+                    ins = messages.insert().values(id=ide, from_id=current_id, destination_id=to, text=body)
+                    connection.execute(ins)
 
                 elif body == 'Начать':
                     vk.messages.send(peer_id=current_id,
@@ -101,11 +98,8 @@ def main():
                                  random_id=get_random_id())
                 they_writing.append(to_write[0][1])
                 to_write.pop(0)
-
     except Exception as e:
-        cur.close()
         print(e)
-        sleep(0.5)
 
 
 if __name__ == "__main__":
