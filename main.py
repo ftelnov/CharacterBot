@@ -1,1 +1,0 @@
-print("Hello from master! Initial commit number 2.")

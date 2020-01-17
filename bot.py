@@ -7,29 +7,19 @@ from datetime import datetime, timedelta
 from random import choice
 import os
 import sqlite3
+from settings import *
+from questions import *
+import sqlalchemy as db
 
-token = ""  # Токен группы с ботом
-group_id = 0  # Id бота
+engine = db.create_engine(db_address)  # создали бдшку по адресу из настроек
+connection = engine.connect()
 
 user = vk_api.VkApi(token=token)
 vk = user.get_api()
 chatting = dict()
 to_write = list()
 they_writing = list()
-# txt
-privet = "Привет. Этот бот предлагает тебе поговорить с кем-нибудь," \
-         " а потом просит твое мнение о собеседнике. Готов найти собеседника?"
 
-greeting = 'Хочу тебя познакомить с {} {}.\n' \
-           'Напиши ему и начните общаться, через 3 дня я напишу снова, ' \
-           'чтобы узнать твое мнение об этом человеке)'
-
-after_3days = 'Привет! 3 дня назад я предложил тебе пообщаться с {} {}, поэтому пишу сейчас, чтобы узнать твое мнение ' \
-              'о ваших отношениях.\n Я задам тебе пару вопросов и попрошу на все ответить. Приступим\n' \
-              'blablabla'
-"""
-Вопросы надо вон наверху написать черт побери
-"""
 # клавиатуры
 # да-нет
 yes_no = VkKeyboard(one_time=True)
@@ -41,22 +31,7 @@ yes_no.add_button('Нет, не надо', color=VkKeyboardColor.NEGATIVE)
 # столбцы from_id, about_id, plaintext
 # откого, о ком, текст отзыва
 flag = 0
-if 'data.db' not in os.listdir('.'):
-    f = open('data.db', 'w')
-    f.close()
-    flag = 1
-    con = sqlite3.connect("data.db")
-    cur = con.cursor()
 
-    cur.execute("""CREATE TABLE REVIEW(
-from_id bigint,
-about_id bigint,
-plaintext text  (32767)
-)""")
-else:
-    con = sqlite3.connect("data.db")
-    cur = con.cursor()
-con.commit()
 
 
 def main():
