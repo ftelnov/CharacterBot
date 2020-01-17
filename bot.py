@@ -5,31 +5,22 @@ from vk_api.utils import get_random_id
 from time import sleep
 from datetime import datetime, timedelta
 from random import choice
-import os
-import sqlite3
+from settings import *
+from questions import *
+from database import *
 
-token = ""  # Токен группы с ботом
-group_id = 0  # Id бота
+db = CharactersDatabase()
+connection = db.get_connection()
+engine = db.get_engine()
+peoples = db.get_peoples()
+messages = db.get_messages()
 
 user = vk_api.VkApi(token=token)
 vk = user.get_api()
 chatting = dict()
 to_write = list()
 they_writing = list()
-# txt
-privet = "Привет. Этот бот предлагает тебе поговорить с кем-нибудь," \
-         " а потом просит твое мнение о собеседнике. Готов найти собеседника?"
 
-greeting = 'Хочу тебя познакомить с {} {}.\n' \
-           'Напиши ему и начните общаться, через 3 дня я напишу снова, ' \
-           'чтобы узнать твое мнение об этом человеке)'
-
-after_3days = 'Привет! 3 дня назад я предложил тебе пообщаться с {} {}, поэтому пишу сейчас, чтобы узнать твое мнение ' \
-              'о ваших отношениях.\n Я задам тебе пару вопросов и попрошу на все ответить. Приступим\n' \
-              'blablabla'
-"""
-Вопросы надо вон наверху написать черт побери
-"""
 # клавиатуры
 # да-нет
 yes_no = VkKeyboard(one_time=True)
@@ -37,26 +28,7 @@ yes_no.add_button('Да, я хочу общаться', color=VkKeyboardColor.PO
 yes_no.add_line()
 yes_no.add_button('Нет, не надо', color=VkKeyboardColor.NEGATIVE)
 
-# Создаем data.db если нету
-# столбцы from_id, about_id, plaintext
-# откого, о ком, текст отзыва
 flag = 0
-if 'data.db' not in os.listdir('.'):
-    f = open('data.db', 'w')
-    f.close()
-    flag = 1
-    con = sqlite3.connect("data.db")
-    cur = con.cursor()
-
-    cur.execute("""CREATE TABLE REVIEW(
-from_id bigint,
-about_id bigint,
-plaintext text  (32767)
-)""")
-else:
-    con = sqlite3.connect("data.db")
-    cur = con.cursor()
-con.commit()
 
 
 def main():
@@ -64,6 +36,7 @@ def main():
 
     try:
         for event in longpoll.listen():
+            print(event)
             if event.type == VkBotEventType.MESSAGE_NEW:
 
                 body = event.object.message['text']
@@ -74,12 +47,11 @@ def main():
                     chatting[current_id].pop(0)
                     they_writing.pop(0)
 
-                    vk.messages.send(peer_id=current_id,
-                                     message="Спасибо за помощь, если хочешь пообщаться еще, то напиши 'Начать'",
-                                     random_id=get_random_id())
-
-                    cur.execute(f"INSERT INTO REVIEW VALUES({current_id}, {to}, '{body}')")
-                    con.commit()
+                    ide = vk.messages.send(peer_id=current_id,
+                                           message="Спасибо за помощь, если хочешь пообщаться еще, то напиши 'Начать'",
+                                           random_id=get_random_id())
+                    ins = messages.insert().values(id=ide, from_id=current_id, destination_id=to, text=body)
+                    connection.execute(ins)
 
                 elif body == 'Начать':
                     vk.messages.send(peer_id=current_id,
@@ -126,11 +98,8 @@ def main():
                                  random_id=get_random_id())
                 they_writing.append(to_write[0][1])
                 to_write.pop(0)
-
     except Exception as e:
-        cur.close()
         print(e)
-        sleep(0.5)
 
 
 if __name__ == "__main__":
