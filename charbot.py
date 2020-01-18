@@ -28,20 +28,28 @@ class CharBot:
     group_id = None
 
     def __init__(self, vk_token=token, group_id=grp_id):
+        print(token)
+
+        # bot init
         self.token = vk_token
         self.group_id = group_id
-        self.session = VkApi(self.token)
+        self.session = VkApi(token=self.token)
         self.api = self.session.get_api()
+        self.longPoll = VkBotLongPoll(self.session, self.group_id)
+
+        # db init
         self.database = CharactersDatabase()
         self.connection = self.database.get_connection()
         self.engine = self.database.get_engine()
+
+        # fields
         self.chatting = dict()
         self.to_write = list()
         self.they_writing = list()
-        self.longPoll = VkBotLongPoll(self.session, self.group_id)
 
     def run(self):
         for event in self.longPoll.listen():
             if event.type == VkBotEventType.MESSAGE_REPLY:
                 print(1)
-            if event.type == VkBotEventType.MESSAGE_NEW
+            if event.type == VkBotEventType.MESSAGE_NEW:
+                print(2)
