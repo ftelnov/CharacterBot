@@ -1,8 +1,12 @@
 from charbot import CharBot
+from time import sleep
 
 
 def main():
     bot = CharBot()
+    sleep(3)
+    bot.init_longpol()
+    sleep(3)
     bot.run()
     # longpoll = VkBotLongPoll(session, group_id)
     # for event in longpoll.listen():

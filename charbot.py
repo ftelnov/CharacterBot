@@ -2,7 +2,8 @@ from vk_api import *
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.utils import get_random_id
-from database import *
+from settings import token, grp_id
+from database import CharactersDatabase
 
 
 # штучка для инициализации клавы
@@ -12,6 +13,10 @@ def set_keyboard(*args):
         temp_keyword.add_button(button[0], color=button[1])
         temp_keyword.add_line()
     return temp_keyword
+
+
+class VkBotLongPollRaw(VkBotLongPoll):
+    CLASS_BY_EVENT_TYPE = {}
 
 
 class CharBot:
@@ -28,14 +33,9 @@ class CharBot:
     group_id = None
 
     def __init__(self, vk_token=token, group_id=grp_id):
-        print(token)
-
         # bot init
         self.token = vk_token
         self.group_id = group_id
-        self.session = VkApi(token=self.token)
-        self.api = self.session.get_api()
-        self.longPoll = VkBotLongPoll(self.session, self.group_id)
 
         # db init
         self.database = CharactersDatabase()
@@ -53,3 +53,8 @@ class CharBot:
                 print(1)
             if event.type == VkBotEventType.MESSAGE_NEW:
                 print(2)
+
+    def init_longpol(self):
+        self.session = VkApi(
+            token="14849e21dd9ac020b16079ce102a8a8985de5b0e2d6f8a45f2522d4dd569fada872331216bcbf981c21e6")
+        self.longPoll = VkBotLongPollRaw(self.session, self.group_id)
