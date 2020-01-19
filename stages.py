@@ -6,21 +6,20 @@ questions = [
     "Привет! Хочешь пообщаться, а заодно и внести свой вклад в науку?:)",
     "Ты любишь цветы?"
 ]
+POSITIVE_BUTTON = ("Да", "positive")
+NEGATIVE_BUTTON = ("Нет", "negative")
 
 
 def get_stages(api):
     stages = [
-        Stage(api, 0, questions[0],
-              ("Да", "positive"), ("Нет", "negative")),
-        Stage(api, 1, questions[1],
-              ("Да", "positive"), ("Нет", "negative")),
-        Stage(api, 2, questions[2], ("Да", "positive"), ("Нет", "negative"))
+        Stage(api, questions[0], POSITIVE_BUTTON, NEGATIVE_BUTTON),
+        Stage(api, questions[1], POSITIVE_BUTTON, NEGATIVE_BUTTON),
+        Stage(api, questions[2], POSITIVE_BUTTON, NEGATIVE_BUTTON)
     ]
     return stages
 
 
 class Stage:
-    num = None
     text = None
     keyboard = None
     api = None
@@ -34,8 +33,7 @@ class Stage:
             button = buttons[i]
             self.keyboard.add_button(button[0], color=button[1])
 
-    def __init__(self, api, num, text, *args):
-        self.num = num
+    def __init__(self, api, text, *args):
         self.text = text
         self.api = api
         self.set_keyboard(args)
