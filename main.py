@@ -5,7 +5,7 @@ from time import sleep
 def main():
     bot = CharBot()
     sleep(1.5)
-    bot.init_longpol()
+    bot.init_longpoll()
     sleep(1.5)
     bot.run()
 
