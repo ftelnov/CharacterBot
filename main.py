@@ -4,9 +4,9 @@ from time import sleep
 
 def main():
     bot = CharBot()
-    sleep(3)
+    sleep(1.5)
     bot.init_longpol()
-    sleep(3)
+    sleep(1.5)
     bot.run()
     # longpoll = VkBotLongPoll(session, group_id)
     # for event in longpoll.listen():

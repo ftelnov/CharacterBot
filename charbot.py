@@ -4,6 +4,7 @@ from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.utils import get_random_id
 from settings import token, grp_id
 from database import CharactersDatabase
+from sqlalchemy import *
 
 
 # штучка для инициализации клавы
@@ -50,11 +51,20 @@ class CharBot:
     def run(self):
         for event in self.longPoll.listen():
             if event.type == VkBotEventType.MESSAGE_REPLY:
-                print(1)
+                self.message_reply_handle(event.obj)
             if event.type == VkBotEventType.MESSAGE_NEW:
-                print(2)
+                self.message_new_handle(event.obj)
 
     def init_longpol(self):
         self.session = VkApi(
             token="14849e21dd9ac020b16079ce102a8a8985de5b0e2d6f8a45f2522d4dd569fada872331216bcbf981c21e6")
         self.longPoll = VkBotLongPollRaw(self.session, self.group_id)
+
+    def message_new_handle(self, obj):
+        insertion = self.database.people_stage.insert().values(user_id=int(obj.get('user_id')), stage=1)
+        self.connection.execute(insertion)
+
+    def message_reply_handle(self, obj):
+        stage = select([self.database.people_stage]).where(self.database.people_stage.columns.user_id == obj.get('user_id'))
+        if stage is None:
+            self.database.people_stage.insert().values(user_id=int(obj.get('user_id')), stage=1)

@@ -9,6 +9,7 @@ class CharactersDatabase:
     metadata = None
     people = None
     message = None
+    people_stage = None
 
     def __init__(self, address=db_address):
         self.address = address
@@ -27,6 +28,8 @@ class CharactersDatabase:
                             Column('kindness', Integer), Column('seriousness', Integer), Column('sharpness', Integer))
         self.message = Table('message', self.metadata, Column('id', Integer, primary_key=True),
                              Column('from_id', Integer), Column('destination_id', Integer), Column('text', String))
+        self.people_stage = Table('people_stage', self.metadata, Column('user_id', Integer, primary_key=True),
+                                  Column('stage', Integer))
 
     def get_connection(self):
         return self.connection
