@@ -32,6 +32,7 @@ class CharBot:
     they_writing = None
     token = None
     group_id = None
+    api = None
 
     def __init__(self, vk_token=token, group_id=grp_id):
         # bot init
@@ -58,13 +59,28 @@ class CharBot:
     def init_longpol(self):
         self.session = VkApi(
             token="14849e21dd9ac020b16079ce102a8a8985de5b0e2d6f8a45f2522d4dd569fada872331216bcbf981c21e6")
+        self.api = self.session.get_api()
         self.longPoll = VkBotLongPollRaw(self.session, self.group_id)
 
     def message_new_handle(self, obj):
-        insertion = self.database.people_stage.insert().values(user_id=int(obj.get('user_id')), stage=1)
+        if not self.database.session.query(self.database.people_stage).filter_by(user_id=obj.get('user_id')).scalar():
+            self.init_user(int(obj.get('user_id')))
+
+    # Метод для инициализации юзера(с дефолт. параметрами)
+    def init_user(self, user_id):
+        user = self.api.users.get(user_id=user_id)[0]
+        insertion = self.database.people_stage.insert().values(user_id=user_id, stage=1)
+        self.connection.execute(insertion)
+        insertion = self.database.people.insert().values(user_id=user_id, name=user['first_name'],
+                                                         last_name=user['last_name'])
+        self.connection.execute(insertion)
+        insertion = self.database.ideal_people.insert().values(user_id=user_id)
         self.connection.execute(insertion)
 
+    # Устаревшая фигня, пока не хочу убирать, если разберусь с MESSAGE_REPLY - верну
+    @DeprecationWarning
     def message_reply_handle(self, obj):
-        stage = select([self.database.people_stage]).where(self.database.people_stage.columns.user_id == obj.get('user_id'))
+        stage = select([self.database.people_stage]).where(
+            self.database.people_stage.columns.user_id == obj.get('user_id'))
         if stage is None:
             self.database.people_stage.insert().values(user_id=int(obj.get('user_id')), stage=1)
