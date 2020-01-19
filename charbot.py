@@ -61,7 +61,7 @@ class CharBot:
         user_id, stage = stage
         result = self.stages[stage].process(user_id, obj.get('message'))
         if result:
-            update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).value(
+            update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
                 stage=stage + 1)
 
     # Метод для инициализации юзера(с дефолт. параметрами)

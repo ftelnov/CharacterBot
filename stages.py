@@ -31,8 +31,6 @@ class Stage:
         for i in range(len(buttons)):
             button = buttons[i]
             self.keyboard.add_button(button[0], color=button[1])
-            if i != len(args) - 1:
-                self.keyboard.add_line()
 
     def __init__(self, api, num, text, *args):
         self.num = num
