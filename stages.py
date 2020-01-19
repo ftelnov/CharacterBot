@@ -48,12 +48,13 @@ class Stage:
             self.users_received[user_id] = 1
             self.send(user_id)
             return 1
+        print(answer)
         for button in self.buttons:
             if button[0] == answer:
-                if button[1] == VkKeyboardColor.NEGATIVE:
+                if button[1] == 'negative':
                     self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
                                            message="Очень жаль - пиши еще, если вдруг надумаешь!")
-                    return 2
+                    return -1
                 else:
                     self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
                                            message="Отлично! Ответ записан, перевожу тебя на следующий этап!")

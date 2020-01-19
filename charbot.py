@@ -59,7 +59,7 @@ class CharBot:
         if not stage:
             self.init_user(int(obj.get('user_id')))
         user_id, stage = stage
-        result = self.stages[stage].process(user_id, obj.get('message'))
+        result = self.stages[stage].process(user_id, obj.get('body'))
         if result:
             update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
                 stage=stage + 1)
