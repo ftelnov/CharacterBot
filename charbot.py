@@ -59,10 +59,21 @@ class CharBot:
         if not stage:
             self.init_user(int(obj.get('user_id')))
         user_id, stage = stage
+        if stage == len(self.stages):
+            self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
+                                   message="Ты уже завершил опрос. Попробуй написать в другое время, может быть, "
+                                           "у нас появятся новые опросы для тебя!")
+            return
         result = self.stages[stage].process(user_id, obj.get('body'))
-        if result:
-            update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
+        if result == 2:
+            req = update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
                 stage=stage + 1)
+            self.connection.execute(req)
+            if stage == len(self.stages) - 1:
+                self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
+                                       message="Спасибо за участие в опросе! Еще увидимся:)")
+                return
+            self.stages[stage + 1].process(user_id, obj.get('body'))
 
     # Метод для инициализации юзера(с дефолт. параметрами)
     def init_user(self, user_id):

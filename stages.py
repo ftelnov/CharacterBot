@@ -4,6 +4,7 @@ from vk_api.utils import get_random_id
 questions = [
     "Начнем наш диалог?",
     "Привет! Хочешь пообщаться, а заодно и внести свой вклад в науку?:)",
+    "Ты любишь цветы?"
 ]
 
 
@@ -13,6 +14,7 @@ def get_stages(api):
               ("Да", "positive"), ("Нет", "negative")),
         Stage(api, 1, questions[1],
               ("Да", "positive"), ("Нет", "negative")),
+        Stage(api, 2, questions[2], ("Да", "positive"), ("Нет", "negative"))
     ]
     return stages
 
@@ -41,14 +43,14 @@ class Stage:
         self.users_received = dict()
 
     def send(self, user_id):
-        self.api.messages.send(peer_id=user_id, random_id=get_random_id(), keyboard=self.keyboard.get_keyboard(), message=self.text)
+        self.api.messages.send(peer_id=user_id, random_id=get_random_id(), keyboard=self.keyboard.get_keyboard(),
+                               message=self.text)
 
     def process(self, user_id, answer):
         if user_id not in self.users_received:
             self.users_received[user_id] = 1
             self.send(user_id)
             return 1
-        print(answer)
         for button in self.buttons:
             if button[0] == answer:
                 if button[1] == 'negative':
@@ -56,8 +58,6 @@ class Stage:
                                            message="Очень жаль - пиши еще, если вдруг надумаешь!")
                     return -1
                 else:
-                    self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
-                                           message="Отлично! Ответ записан, перевожу тебя на следующий этап!")
                     return 2
         self.api.messages.send(peer_id=user_id, random_id=get_random_id(), message="Извини, я тебя не понимаю!")
         return 0
