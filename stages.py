@@ -54,8 +54,6 @@ class Stage:
         for button in self.buttons:
             if button[0] == answer:
                 if button[1] == 'negative':
-                    self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
-                                           message="Очень жаль - пиши еще, если вдруг надумаешь!")
                     return -1
                 else:
                     return 2

@@ -65,7 +65,7 @@ class CharBot:
                                            "у нас появятся новые опросы для тебя!")
             return
         result = self.stages[stage].process(user_id, obj.get('body'))
-        if result == 2:
+        if result == 2 or result == -1:
             req = update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
                 stage=stage + 1)
             self.connection.execute(req)
