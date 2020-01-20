@@ -11,12 +11,13 @@ POSITIVE_BUTTON = ("Да", "positive")
 NEGATIVE_BUTTON = ("Нет", "negative")
 
 
-def get_stages(api, db):
-    stages = []
-    with open("questions.txt") as file:
+def get_stages(connection, api, db):
+    stages = [StageWithKeyboard(api, questions[0], POSITIVE_BUTTON, NEGATIVE_BUTTON),
+              StageWithKeyboard(api, questions[1], POSITIVE_BUTTON, NEGATIVE_BUTTON)]
+    with open("data/questions.txt", encoding='UTF-8') as file:
         for line in file.readlines():
             quest, row, value = line.split("|")
-            stages.append(StageWithKeyboardAizenk(api, quest, db.people, value))
+            stages.append(StageWithKeyboardAizenk(connection, api, quest, db.people, row, value))
     return stages
 
 
@@ -76,11 +77,15 @@ class StageWithKeyboard(DefaultStage):
 class StageWithKeyboardAizenk(StageWithKeyboard):
     db_table = None
     db_row = None
+    value = None
+    connection = None
 
-    def __init__(self, api, text, db_table, db_row):
+    def __init__(self, connection, api, text, db_table, db_row, value):
         super().__init__(api, text, POSITIVE_BUTTON, NEGATIVE_BUTTON)
         self.db_table = db_table
         self.db_row = db_row
+        self.value = value
+        self.connection = connection
 
     def process(self, user_id, answer):
         if user_id not in self.users_received:
@@ -89,12 +94,16 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
             return 1
         for button in self.buttons:
             if button[0] == answer:
-                user = self.db_table.query.filter_by(self.db_table.c.user_id == user_id).first()
-                if button[1] == 'negative':
-                    exec("user." + self.db_row + "-=1")
-                    return -1
-                else:
-                    exec("user." + self.db_row + "+=1")
-                    return 2
+                if (button[1] == 'negative' and int(self.value) == -1) or (button[1] == 'positive' and int(self.value) == 1):
+                    if self.db_row == "extroversion":
+                        self.connection.execute(self.db_table.update(self.db_table.c.user_id == user_id).values(
+                            extroversion=self.db_table.c.extroversion + 1))
+                    elif self.db_row == "lie":
+                        self.connection.execute(self.db_table.update(self.db_table.c.user_id == user_id).values(
+                            lie=self.db_table.c.lie + 1))
+                    elif self.db_row == "neurotism":
+                        self.connection.execute(self.db_table.update(self.db_table.c.user_id == user_id).values(
+                            neurotism=self.db_table.c.neurotism + 1))
+                return 1
         self.api.messages.send(peer_id=user_id, random_id=get_random_id(), message="Извини, я тебя не понимаю!")
         return 0

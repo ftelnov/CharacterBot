@@ -51,7 +51,7 @@ class CharBot:
             token="14849e21dd9ac020b16079ce102a8a8985de5b0e2d6f8a45f2522d4dd569fada872331216bcbf981c21e6")
         self.api = self.session.get_api()
         self.longPoll = VkBotLongPollRaw(self.session, self.group_id)
-        self.stages = get_stages(self.api)
+        self.stages = get_stages(self.database.connection, self.api, self.database)
 
     def message_new_handle(self, obj):
         stage = self.database.session.query(self.database.people_stage).filter(
@@ -65,7 +65,7 @@ class CharBot:
                                            "у нас появятся новые опросы для тебя!")
             return
         result = self.stages[stage].process(user_id, obj.get('body'))
-        if result == 2 or result == -1:
+        if result > 0:
             req = update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
                 stage=stage + 1)
             self.connection.execute(req)
