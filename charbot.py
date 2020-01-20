@@ -61,23 +61,27 @@ class CharBot:
             self.init_user(int(obj.get('user_id')))
         stage = self.database.session.query(self.database.people_stage).filter(
             self.database.people_stage.c.user_id == obj.get('user_id')).first()
-        user_id, stage = stage
+        user_id, stage, answered, transferred = stage
         if stage == len(self.stages):
             self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
                                    message="Ты уже завершил опрос. Попробуй написать в другое время, может быть, "
                                            "у нас появятся новые опросы для тебя!")
             return
-        result = self.stages[stage].process(user_id, obj.get('body'))
+        result = self.stages[stage].process(transferred, user_id, obj.get('body'))
+        if not transferred:
+            self.connection.execute(
+                update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
+                    transferred=True))
         if result > 0:
             req = update(self.database.people_stage).where(self.database.people_stage.c.user_id == user_id).values(
-                stage=stage + 1)
+                stage=stage + 1, transferred=True)
             self.connection.execute(req)
             if stage == len(self.stages) - 1:
                 self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
                                        message="Спасибо за участие в опросе! Еще увидимся:)",
                                        keyboard=VkKeyboard.get_empty_keyboard())
                 return
-            self.stages[stage + 1].process(user_id, obj.get('body'))
+            self.stages[stage + 1].process(False, user_id, obj.get('body'))
 
     # Метод для инициализации юзера(с дефолт. параметрами)
     def init_user(self, user_id):

@@ -24,7 +24,6 @@ def get_stages(connection, api, db):
 class DefaultStage:
     text = None
     api = None
-    users_received = None
 
     def __init__(self, api, text, *args):
         pass
@@ -32,7 +31,7 @@ class DefaultStage:
     def send(self, user_id):
         pass
 
-    def process(self, user_id, answer):
+    def process(self, code, user_id, answer):
         pass
 
 
@@ -53,15 +52,13 @@ class StageWithKeyboard(DefaultStage):
         self.api = api
         self.set_keyboard(args)
         self.buttons = args
-        self.users_received = dict()
 
     def send(self, user_id):
         self.api.messages.send(peer_id=user_id, random_id=get_random_id(), keyboard=self.keyboard.get_keyboard(),
                                message=self.text)
 
-    def process(self, user_id, answer):
-        if user_id not in self.users_received:
-            self.users_received[user_id] = 1
+    def process(self, code, user_id, answer):
+        if not code:
             self.send(user_id)
             return -1
         for button in self.buttons:
@@ -87,9 +84,8 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
         self.value = value
         self.connection = connection
 
-    def process(self, user_id, answer):
-        if user_id not in self.users_received:
-            self.users_received[user_id] = 1
+    def process(self, code, user_id, answer):
+        if not code:
             self.send(user_id)
             return -1
         for button in self.buttons:

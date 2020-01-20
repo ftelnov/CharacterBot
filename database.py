@@ -35,7 +35,7 @@ class CharactersDatabase:
         self.message = Table('message', self.metadata, Column('id', Integer, primary_key=True),
                              Column('from_id', Integer), Column('destination_id', Integer), Column('text', String))
         self.people_stage = Table('people_stage', self.metadata, Column('user_id', Integer, primary_key=True),
-                                  Column('stage', Integer))
+                                  Column('stage', Integer), Column('transferred', Boolean, default=False))
 
     def get_connection(self):
         return self.connection
