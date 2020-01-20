@@ -30,8 +30,8 @@ class CharactersDatabase:
     def init_tables(self):
         self.people = Table('people', self.metadata, Column('user_id', Integer, primary_key=True),
                             Column('name', String),
-                            Column('last_name', String), Column('Extroversion', Integer, default=0),
-                            Column('Neurotism', Integer, default=0), Column('LieLevel', Integer, default=0))
+                            Column('last_name', String), Column('extroversion', Integer, default=0),
+                            Column('neurotism', Integer, default=0), Column('lie', Integer, default=0))
         self.message = Table('message', self.metadata, Column('id', Integer, primary_key=True),
                              Column('from_id', Integer), Column('destination_id', Integer), Column('text', String))
         self.people_stage = Table('people_stage', self.metadata, Column('user_id', Integer, primary_key=True),

@@ -11,12 +11,12 @@ POSITIVE_BUTTON = ("Да", "positive")
 NEGATIVE_BUTTON = ("Нет", "negative")
 
 
-def get_stages(api):
-    stages = [
-        Stage(api, questions[0], POSITIVE_BUTTON, NEGATIVE_BUTTON),
-        Stage(api, questions[1], POSITIVE_BUTTON, NEGATIVE_BUTTON),
-        Stage(api, questions[2], POSITIVE_BUTTON, NEGATIVE_BUTTON)
-    ]
+def get_stages(api, db):
+    stages = []
+    with open("questions.txt") as file:
+        for line in file.readlines():
+            quest, row, value = line.split("|")
+            stages.append(StageWithKeyboardAizenk(api, quest, db.people, value))
     return stages
 
 
@@ -76,13 +76,11 @@ class StageWithKeyboard(DefaultStage):
 class StageWithKeyboardAizenk(StageWithKeyboard):
     db_table = None
     db_row = None
-    value = None
 
-    def __init__(self, api, text, db_table, db_row, value, *args):
-        super().__init__(api, text, *args)
+    def __init__(self, api, text, db_table, db_row):
+        super().__init__(api, text, POSITIVE_BUTTON, NEGATIVE_BUTTON)
         self.db_table = db_table
         self.db_row = db_row
-        self.value = value
 
     def process(self, user_id, answer):
         if user_id not in self.users_received:
@@ -91,10 +89,12 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
             return 1
         for button in self.buttons:
             if button[0] == answer:
+                user = self.db_table.query.filter_by(self.db_table.c.user_id == user_id).first()
                 if button[1] == 'negative':
-
+                    exec("user." + self.db_row + "-=1")
                     return -1
                 else:
+                    exec("user." + self.db_row + "+=1")
                     return 2
         self.api.messages.send(peer_id=user_id, random_id=get_random_id(), message="Извини, я тебя не понимаю!")
         return 0
