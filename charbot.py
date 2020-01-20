@@ -61,7 +61,7 @@ class CharBot:
             self.init_user(int(obj.get('user_id')))
         stage = self.database.session.query(self.database.people_stage).filter(
             self.database.people_stage.c.user_id == obj.get('user_id')).first()
-        user_id, stage, answered, transferred = stage
+        user_id, stage, transferred = stage
         if stage == len(self.stages):
             self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
                                    message="Ты уже завершил опрос. Попробуй написать в другое время, может быть, "
