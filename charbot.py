@@ -83,8 +83,6 @@ class CharBot:
         insertion = self.database.people.insert().values(user_id=user_id, name=user['first_name'],
                                                          last_name=user['last_name'])
         self.connection.execute(insertion)
-        insertion = self.database.ideal_people.insert().values(user_id=user_id)
-        self.connection.execute(insertion)
 
     # Устаревшая фигня, пока не хочу убирать, если разберусь с MESSAGE_REPLY - верну
     @DeprecationWarning
