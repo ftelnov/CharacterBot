@@ -1,6 +1,7 @@
 from vk_api import *
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.utils import get_random_id
+from vk_api.keyboard import VkKeyboard
 from settings import token, grp_id
 from database import CharactersDatabase
 from sqlalchemy import *
@@ -56,8 +57,10 @@ class CharBot:
     def message_new_handle(self, obj):
         stage = self.database.session.query(self.database.people_stage).filter(
             self.database.people_stage.c.user_id == obj.get('user_id')).first()
-        if not stage:
+        if stage is None:
             self.init_user(int(obj.get('user_id')))
+        stage = self.database.session.query(self.database.people_stage).filter(
+            self.database.people_stage.c.user_id == obj.get('user_id')).first()
         user_id, stage = stage
         if stage == len(self.stages):
             self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
@@ -71,7 +74,8 @@ class CharBot:
             self.connection.execute(req)
             if stage == len(self.stages) - 1:
                 self.api.messages.send(peer_id=user_id, random_id=get_random_id(),
-                                       message="Спасибо за участие в опросе! Еще увидимся:)")
+                                       message="Спасибо за участие в опросе! Еще увидимся:)",
+                                       keyboard=VkKeyboard.get_empty_keyboard())
                 return
             self.stages[stage + 1].process(user_id, obj.get('body'))
 

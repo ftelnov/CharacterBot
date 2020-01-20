@@ -41,7 +41,7 @@ class StageWithKeyboard(DefaultStage):
     buttons = None
 
     def set_keyboard(self, *args):
-        self.keyboard = VkKeyboard(one_time=True)
+        self.keyboard = VkKeyboard(one_time=False)
         buttons = list(*args)
         for i in range(len(buttons)):
             button = buttons[i]
@@ -63,13 +63,13 @@ class StageWithKeyboard(DefaultStage):
         if user_id not in self.users_received:
             self.users_received[user_id] = 1
             self.send(user_id)
-            return 1
+            return -1
         for button in self.buttons:
-            if button[0] == answer:
+            if button[0] == answer.capitalize():
                 if button[1] == 'negative':
                     return -1
                 else:
-                    return 2
+                    return 1
         self.api.messages.send(peer_id=user_id, random_id=get_random_id(), message="Извини, я тебя не понимаю!")
         return 0
 
@@ -91,10 +91,11 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
         if user_id not in self.users_received:
             self.users_received[user_id] = 1
             self.send(user_id)
-            return 1
+            return -1
         for button in self.buttons:
-            if button[0] == answer:
-                if (button[1] == 'negative' and int(self.value) == -1) or (button[1] == 'positive' and int(self.value) == 1):
+            if button[0] == answer.capitalize():
+                if (button[1] == 'negative' and int(self.value) == -1) or (
+                        button[1] == 'positive' and int(self.value) == 1):
                     if self.db_row == "extroversion":
                         self.connection.execute(self.db_table.update(self.db_table.c.user_id == user_id).values(
                             extroversion=self.db_table.c.extroversion + 1))
