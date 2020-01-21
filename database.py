@@ -1,33 +1,24 @@
 from settings import *
 from sqlalchemy import *
 from sqlalchemy.orm import *
+from sqlalchemy.ext.declarative import declarative_base
+
+engine = create_engine(db_address)
+Base = declarative_base(engine)
 
 
-class CharactersDatabase:
-    address = db_address
-    engine = None
-    connection = None
-    metadata = None
-    people = None
-    message = None
-    people_stage = None
-    ideal_people = None
-    session = None
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    first_name = Column(String)
+    last_name = Column(String)
+    extroversion = Column(Integer, default=0)
+    neurotism = Column(Integer, default=0)
+    lie = Column(Integer, default=0)
+    stage = Column(Integer, default=0)
+    stage_transferred = Column(Boolean, default=False)
 
-    def __init__(self, address=db_address):
-        self.address = address
-        self.engine = create_engine(self.address)
-        self.connection = self.engine.connect()
-        self.metadata = MetaData(self.engine)
-        session = sessionmaker(self.engine)
-        self.session = session()
-        self.metadata.create_all()
 
-    def get_connection(self):
-        return self.connection
-
-    def get_engine(self):
-        return self.engine
-
-    def get_peoples(self):
-        return self.people
+temp = sessionmaker(engine)
+session = temp()
+Base.metadata.create_all(engine)
