@@ -55,6 +55,14 @@ class CharBot:
         result = self.stages[stage].process(transferred, user_id, obj.get("body"))
         if not transferred:
             user.stage_transferred = True
+        if result == -7:
+            stage -= 1
+            if stage < 2:
+                stage = 2
+            user.stage = stage
+            user.stage_transferred = True
+            self.stages[stage].process(False, user_id, obj.get("body"))
+            return
         if result > 0:
             user.stage += 1
             if stage >= len(self.stages) - 1:
