@@ -72,17 +72,13 @@ class StageWithKeyboard(DefaultStage):
 
 
 class StageWithKeyboardAizenk(StageWithKeyboard):
-    db_table = None
-    db_row = None
+    session = None
     value = None
-    connection = None
 
-    def __init__(self, connection, api, text, db_table, db_row, value):
+    def __init__(self, session, value, api, text):
         super().__init__(api, text, POSITIVE_BUTTON, NEGATIVE_BUTTON)
-        self.db_table = db_table
-        self.db_row = db_row
+        self.connection = session
         self.value = value
-        self.connection = connection
 
     def process(self, code, user_id, answer):
         if not code:
