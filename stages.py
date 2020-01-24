@@ -10,6 +10,7 @@ questions = [
 ]
 POSITIVE_BUTTON = ("Да", "positive")
 NEGATIVE_BUTTON = ("Нет", "negative")
+BACK_BUTTON = ("Назад", "default")
 
 
 def get_stages(session, api):
@@ -78,7 +79,7 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
     parameter = None
 
     def __init__(self, session, api, text, value, parameter):
-        super().__init__(api, text, POSITIVE_BUTTON, NEGATIVE_BUTTON)
+        super().__init__(api, text, POSITIVE_BUTTON, NEGATIVE_BUTTON, BACK_BUTTON)
         self.session = session
         self.value = value
         self.parameter = parameter
@@ -87,6 +88,8 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
         if not code:
             self.send(user_id)
             return 0
+        if answer == "Назад":
+            return -7
         for button in self.buttons:
             if button[0] == answer.capitalize():
                 if (button[1] == 'negative' and int(self.value) == -1) or (
