@@ -17,6 +17,7 @@ class User(Base):
     lie = Column(Integer, default=0)
     stage = Column(Integer, default=0)
     stage_transferred = Column(Boolean, default=False)
+    results = Column(String, default="")
 
 
 temp = sessionmaker(engine)

@@ -13,21 +13,38 @@ NEGATIVE_BUTTON = ("Нет", "negative")
 BACK_BUTTON = ("Назад", "default")
 
 
-def get_stages(session, api):
-    stages = [StageWithKeyboard(api, questions[0], POSITIVE_BUTTON, NEGATIVE_BUTTON),
-              StageWithKeyboard(api, questions[1], POSITIVE_BUTTON, NEGATIVE_BUTTON)]
-    with open("data/questions.txt", encoding='UTF-8') as file:
-        for line in file.readlines():
-            quest, row, value = line.split("|")
-            stages.append(StageWithKeyboardAizenk(session, api, quest, value, row))
-    return stages
+class StagesProvider:
+    session = None
+    api = None
+    stages = None
+    flag = 0
+
+    def get_stages(self):
+        stages = [StageWithKeyboard(self, questions[0], POSITIVE_BUTTON, NEGATIVE_BUTTON),
+                  StageWithKeyboard(self, questions[1], POSITIVE_BUTTON, NEGATIVE_BUTTON)]
+        with open("data/questions.txt", encoding='UTF-8') as file:
+            for line in file.readlines():
+                quest, row, value = line.split("|")
+                stages.append(StageWithKeyboardAizenk(self, quest, value, row))
+        self.stages = stages
+
+    def __init__(self, session, api):
+        self.session = session
+        self.api = api
+        return
+
+    def get_instance(self):
+        if not self.flag:
+            self.get_stages()
+            self.flag = 1
+        return self.stages
 
 
 class DefaultStage:
     text = None
     api = None
 
-    def __init__(self, api, text, *args):
+    def __init__(self, stage_provider, text, *args):
         pass
 
     def send(self, user_id):
@@ -48,10 +65,10 @@ class StageWithKeyboard(DefaultStage):
             button = buttons[i]
             self.keyboard.add_button(button[0], color=button[1])
 
-    def __init__(self, api, text, *args):
-        super().__init__(api, text, *args)
+    def __init__(self, stage_provider, text, *args):
+        super().__init__(stage_provider, text, *args)
         self.text = text
-        self.api = api
+        self.api = stage_provider.api
         self.set_keyboard(args)
         self.buttons = args
 
@@ -67,7 +84,7 @@ class StageWithKeyboard(DefaultStage):
             if button[0] == answer.capitalize():
                 if button[1] == 'negative':
                     return 0
-                else:
+                elif button[1] == 'positive':
                     return 1
         self.api.messages.send(peer_id=user_id, random_id=get_random_id(), message="Извини, я тебя не понимаю!")
         return 0
@@ -77,12 +94,16 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
     session = None
     value = None
     parameter = None
+    api = None
+    stages = None
 
-    def __init__(self, session, api, text, value, parameter):
-        super().__init__(api, text, POSITIVE_BUTTON, NEGATIVE_BUTTON, BACK_BUTTON)
-        self.session = session
+    def __init__(self, stages_provider, text, value, parameter):
+        super().__init__(stages_provider, text, POSITIVE_BUTTON, NEGATIVE_BUTTON, BACK_BUTTON)
+        self.session = stages_provider.session
         self.value = value
+        self.api = stages_provider.api
         self.parameter = parameter
+        self.stages = stages_provider.stages
 
     def process(self, code, user_id, answer):
         if not code:
@@ -92,11 +113,14 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
             return -7
         for button in self.buttons:
             if button[0] == answer.capitalize():
+                user = self.session.query(User).filter_by(id=user_id).first()
                 if (button[1] == 'negative' and int(self.value) == -1) or (
                         button[1] == 'positive' and int(self.value) == 1):
-                    user = self.session.query(User).filter_by(id=user_id).first()
                     setattr(user, self.parameter, getattr(user, self.parameter) + 1)
-                    self.session.commit()
+                    user.results += "+"
+                else:
+                    user.results += "-"
+                self.session.commit()
                 return 1
         self.api.messages.send(peer_id=user_id, random_id=get_random_id(), message="Извини, я тебя не понимаю!")
         return 0
