@@ -119,7 +119,8 @@ class CharBot:
             first, second = level
             if first < neuro <= second:
                 result += strings["your_level_neuro"] + ranges_neuro[level] + ". Спасибо за участие. Еще увидимся:)"
-        self.api.messages.send(peer_id=user_id, message=result, random_id=get_random_id())
+        self.api.messages.send(peer_id=user_id, message=result, random_id=get_random_id(),
+                               keyboard=VkKeyboard.get_empty_keyboard())
 
     # Метод для инициализации юзера(с дефолт. параметрами)
     def init_user(self, user_id):
