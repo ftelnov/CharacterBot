@@ -109,7 +109,7 @@ class StageWithKeyboardAizenk(StageWithKeyboard):
         if not code:
             self.send(user_id)
             return 0
-        if answer == "Назад":
+        if answer.capitalize() == "Назад":
             return -7
         for button in self.buttons:
             if button[0] == answer.capitalize():
