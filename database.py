@@ -21,6 +21,15 @@ class User(Base):
     need_renew = Column(Boolean, default=False)
 
 
+class Message(Base):
+    __tablename__ = "messages"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    message = Column(String, default="")
+    peer_id = Column(Integer)
+    checked = Column(Boolean, default=False)
+
+
 temp = sessionmaker(engine)
 session = temp()
 Base.metadata.create_all(engine)
