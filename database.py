@@ -15,7 +15,7 @@ class User(Base):
     extroversion = Column(Integer, default=0)
     neurotism = Column(Integer, default=0)
     lie = Column(Integer, default=0)
-    stage = Column(Integer, default=0)
+    stage = Column(Integer, default=-1)
     stage_transferred = Column(Boolean, default=False)
     results = Column(String, default="")
     need_renew = Column(Boolean, default=False)

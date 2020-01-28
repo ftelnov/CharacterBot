@@ -8,7 +8,7 @@ from sqlalchemy import *
 from stages import StagesProvider
 
 
-class MyVkLongPoll(VkLongPoll):
+class MyVkLongPoll(VkBotLongPoll):
     CLASS_BY_EVENT_TYPE = {}
 
     def listen(self):
@@ -62,52 +62,49 @@ class CharBot:
         self.session.commit()
 
     def message_new_handle(self, obj):
-        try:
-            user_id = int(obj.get('user_id'))
+        user_id = int(obj.get('user_id'))
+        user = self.session.query(User).filter_by(id=user_id).first()
+        if user is None:
+            self.init_user(user_id)
             user = self.session.query(User).filter_by(id=user_id).first()
-            if user is None:
-                self.init_user(user_id)
-            if user.stage == 0 and obj.get("body").capitalize() == "Начать":
-                user.stage = 1
-                self.session.commit()
-            if user.need_renew:
-                if obj.get('body') == "Повторить":
-                    self.clean_user_data(user_id)
-                else:
-                    self.api.messages.send(peer_id=user_id, message=strings["need_renew"], random_id=get_random_id())
-                    return
-            stage, transferred = user.stage, user.stage_transferred
-            if stage >= len(self.stages):
-                self.api.messages.send(peer_id=user_id, message=strings['finished'],
-                                       random_id=get_random_id())
-                return
-            result = self.stages[stage - 1].process(transferred, user_id, obj.get("body"))
-            if not transferred:
-                user.stage_transferred = True
-            if result == -7:
-                stage -= 1
-                if stage < 1:
-                    stage = 1
-                else:
-                    if user.results[-1] == '+':
-                        setattr(user, self.stages[stage - 1].parameter,
-                                getattr(user, self.stages[stage - 1].parameter) - 1)
-                    user.results = user.results[:-1]
-                user.stage = stage
-                user.stage_transferred = True
-                self.session.commit()
-                self.stages[stage].process(False, user_id, obj.get("body"))
-                return
-            if result > 0:
-                user.stage += 1
-                if stage >= len(self.stages) - 1:
-                    self.check_answers(user_id)
-                    return
-                self.stages[stage + 1].process(False, user_id, "None")
+        if user.stage == -1 and obj.get("body").capitalize() == "Начать":
+            user.stage = 0
             self.session.commit()
-        except Exception as exc:
-            with open('data/log.txt', "a") as file:
-                file.write("\n" + str(exc) + "\n")
+        if user.need_renew:
+            if obj.get('body') == "Повторить":
+                self.clean_user_data(user_id)
+            else:
+                self.api.messages.send(peer_id=user_id, message=strings["need_renew"], random_id=get_random_id())
+                return
+        stage, transferred = user.stage, user.stage_transferred
+        if stage >= len(self.stages):
+            self.api.messages.send(peer_id=user_id, message=strings['finished'],
+                                   random_id=get_random_id())
+            return
+        result = self.stages[stage].process(transferred, user_id, obj.get("body"))
+        if not transferred:
+            user.stage_transferred = True
+        if result == -7:
+            stage -= 1
+            if stage < 0:
+                stage = 0
+            else:
+                if user.results[-1] == '+':
+                    setattr(user, self.stages[stage - 1].parameter,
+                            getattr(user, self.stages[stage - 1].parameter) - 1)
+                user.results = user.results[:-1]
+            user.stage = stage
+            user.stage_transferred = True
+            self.session.commit()
+            self.stages[stage].process(False, user_id, obj.get("body"))
+            return
+        if result > 0:
+            user.stage += 1
+            if stage >= len(self.stages) - 1:
+                self.check_answers(user_id)
+                return
+            self.stages[stage + 1].process(False, user_id, "None")
+        self.session.commit()
 
     def check_answers(self, user_id):
         user = self.session.query(User).filter_by(id=user_id).first()
