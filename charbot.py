@@ -8,8 +8,16 @@ from sqlalchemy import *
 from stages import StagesProvider
 
 
-class VkBotLongPollRaw(VkBotLongPoll):
+class MyVkLongPoll(VkLongPoll):
     CLASS_BY_EVENT_TYPE = {}
+
+    def listen(self):
+        while True:
+            try:
+                for event in self.check():
+                    yield event
+            except Exception as e:
+                print('error', e)
 
 
 class CharBot:
@@ -27,7 +35,6 @@ class CharBot:
         # bot init
         self.token = vk_token
         self.group_id = group_id
-
         self.session = session
 
     def run(self):
@@ -39,7 +46,7 @@ class CharBot:
         self.api_session = VkApi(
             token=strings['token'])
         self.api = self.api_session.get_api()
-        self.longPoll = VkBotLongPollRaw(self.api_session, self.group_id)
+        self.longPoll = MyVkLongPoll(self.api_session, self.group_id)
         self.stageProvider = StagesProvider(self.session, self.api)
         self.stages = self.stageProvider.get_instance()
 
@@ -60,7 +67,9 @@ class CharBot:
             user = self.session.query(User).filter_by(id=user_id).first()
             if user is None:
                 self.init_user(user_id)
-            user = self.session.query(User).filter_by(id=user_id).first()
+            if user.stage == 0 and obj.get("body").capitalize() == "Начать":
+                user.stage = 1
+                self.session.commit()
             if user.need_renew:
                 if obj.get('body') == "Повторить":
                     self.clean_user_data(user_id)
@@ -72,16 +81,17 @@ class CharBot:
                 self.api.messages.send(peer_id=user_id, message=strings['finished'],
                                        random_id=get_random_id())
                 return
-            result = self.stages[stage].process(transferred, user_id, obj.get("body"))
+            result = self.stages[stage - 1].process(transferred, user_id, obj.get("body"))
             if not transferred:
                 user.stage_transferred = True
             if result == -7:
                 stage -= 1
-                if stage < 2:
-                    stage = 2
+                if stage < 1:
+                    stage = 1
                 else:
                     if user.results[-1] == '+':
-                        setattr(user, self.stages[stage].parameter, getattr(user, self.stages[stage].parameter) - 1)
+                        setattr(user, self.stages[stage - 1].parameter,
+                                getattr(user, self.stages[stage - 1].parameter) - 1)
                     user.results = user.results[:-1]
                 user.stage = stage
                 user.stage_transferred = True

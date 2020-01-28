@@ -3,11 +3,6 @@ from vk_api.utils import get_random_id
 from sqlalchemy import *
 from database import User
 
-questions = [
-    "Начнем наш диалог?",
-    "Привет! Хочешь пообщаться, а заодно и внести свой вклад в науку?:)",
-    "Ты любишь цветы?"
-]
 POSITIVE_BUTTON = ("Да", "positive")
 NEGATIVE_BUTTON = ("Нет", "negative")
 BACK_BUTTON = ("Назад", "default")
@@ -20,8 +15,7 @@ class StagesProvider:
     flag = 0
 
     def get_stages(self):
-        stages = [StageWithKeyboard(self, questions[0], POSITIVE_BUTTON, NEGATIVE_BUTTON),
-                  StageWithKeyboard(self, questions[1], POSITIVE_BUTTON, NEGATIVE_BUTTON)]
+        stages = []
         with open("data/questions.txt", encoding='UTF-8') as file:
             for line in file.readlines():
                 quest, row, value = line.split("|")
