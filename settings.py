@@ -1,5 +1,6 @@
+from os import environ
 strings = {
-    'token': "6cc187e46a2645689d3e41ad3439a3513a15dd25a10efec596a7800f125ddd4f4069b344406fcee180654",
+    'token': environ.get("TOKEN"),
     'high_lie': "Вынужден Вам сообщить, что у вас наблюдается неискренность в ответах, что в свою очередь может "
                 "свидетельствовать о демонстративном поведении. Пройти тест еще раз? ",
     'finished': "Извини, для тебя пока ничего нет, заглядывай позже!",
@@ -25,5 +26,5 @@ ranges_neuro = {
     (-5, 9): "нестабильная психика"
 }
 
-grp_id = '190919664'
-db_address = 'sqlite:///main.sqlite'
+grp_id = int(environ.get("GRP_ID"))
+db_address = environ.get('BASE_ADDRESS')
