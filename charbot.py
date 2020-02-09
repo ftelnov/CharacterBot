@@ -8,6 +8,15 @@ from sqlalchemy import *
 from stages import StagesProvider
 import multiprocessing
 import random
+from requests.adapters import HTTPAdapter
+
+
+class MyHTTPAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        super(MyHTTPAdapter, self).__init__(*args, **kwargs)
+
+    def send(self, *args, **kwargs):
+        return super(MyHTTPAdapter, self).send(*args, **kwargs)
 
 
 class MyVkLongPoll(VkBotLongPoll):
@@ -40,23 +49,23 @@ class CharBot:
     api_session = None
     stageProvider = None
     process = None
-    waiting_users = []
+    waiting_users = multiprocessing.Manager().list()
 
     def match_users(self):
-
         while True:
             while len(self.waiting_users) >= 2:
                 first, second = random.sample(range(0, len(self.waiting_users)), 2)
-                user_first, user_second = self.waiting_users[first], self.waiting_users[second]
+                user_first, user_second = self.session.query(User).filter_by(
+                    id=self.waiting_users[first].id).first(), self.session.query(User).filter_by(
+                    id=self.waiting_users[second].id).first()
+                self.waiting_users.pop(first)
+                self.waiting_users.pop(second - 1)
                 user_first.in_chat = True
                 user_first.with_user = user_second.id
                 user_second.in_chat = True
-                user_second.with_user = user_second.id
-                self.waiting_users.pop(first)
-                self.waiting_users.pop(second)
-                self.api.messages.send(peer_id=user_first.id, message="Отлично, мы нашли вам собеседника! Общайтесь:)",
-                                       random_id=get_random_id(), keyboard=end_chat_keyboard.get_keyboard())
-                self.api.messages.send(peer_id=user_second.id, message="Отлично, мы нашли вам собеседника! Общайтесь:)",
+                user_second.with_user = user_first.id
+                self.api.messages.send(user_ids=[user_second.id, user_first.id],
+                                       message="Отлично, мы нашли вам собеседника! Общайтесь:)",
                                        random_id=get_random_id(), keyboard=end_chat_keyboard.get_keyboard())
                 self.session.commit()
 
@@ -74,10 +83,13 @@ class CharBot:
     def init_longpoll(self):
         self.api_session = VkApi(
             token=strings['token'])
+        with open('http.txt') as file:
+            http = list(map(lambda x: 'http://' + str(x).rstrip('\n') + '/', file.readlines()))
+        with open('https.txt') as file:
+            https = list(map(lambda x: 'https://' + str(x).rstrip('\n') + '/', file.readlines()))
+        self.api_session.http.mount('https://', MyHTTPAdapter(max_retries=10))
         self.api = self.api_session.get_api()
         self.longPoll = MyVkLongPoll(self.api_session, self.group_id)
-        self.stageProvider = StagesProvider(self.session, self.api)
-        self.stages = self.stageProvider.get_instance()
         self.process = multiprocessing.Process(target=self.match_users)
         self.process.start()
 
@@ -96,17 +108,21 @@ class CharBot:
         text = message['text']
         if not user.in_chat and text == "Начать чат":
             self.api.messages.send(peer_id=user.id, message="Подожди, пока мы подберем тебе собеседника!",
-                                   random_id=get_random_id())
+                                   random_id=get_random_id(), keyboard=VkKeyboard.get_empty_keyboard())
             self.waiting_users.append(user)
         if str(text).capitalize() == "Завершить чат":
-            self.api.messages.send(peer_id=user.id,
+            self.api.messages.send(peer_id=user.id, random_id=get_random_id(),
                                    message="Завершаю чат. Когда надумаешь - напиши `Начать чат`, или нажми "
                                            "соответствующую кнопку",
                                    keyboard=start_chat_keyboard.get_keyboard())
+            self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
+                                   message=strings['teammate_end_conv'], keyboard=start_chat_keyboard.get_keyboard())
+            user_with = self.session.query(User).filter_by(id=user.with_user).first()
+            user_with.in_chat = False
             user.in_chat = False
             self.session.commit()
-
-        self.api.messages.send(peer_id=user.with_user, message=text, random_id=get_random_id())
+        if user.in_chat:
+            self.api.messages.send(peer_id=user.with_user, message=text, random_id=get_random_id())
 
     def message_new_handle(self, obj):
         message = obj['message']
@@ -116,51 +132,25 @@ class CharBot:
         if user is None:
             self.init_user(user_id)
             user = self.session.query(User).filter_by(id=user_id).first()
-
-        if user.stage == -1:
-            if message_text.capitalize() == "Начать":
-                user.stage = 0
-                self.session.commit()
-            else:
-                return
-        if user.need_renew:
-            if message_text == "Повторить":
-                self.clean_user_data(user_id)
-            else:
-                self.api.messages.send(peer_id=user_id, message=strings["need_renew"], random_id=get_random_id())
-                return
+        if not user.received_hello and message_text == "Начать":
+            user.received_hello = True
+            self.session.commit()
+            self.api.messages.send(peer_id=user.id, message=strings['lets_start'], random_id=get_random_id(),
+                                   attachment="photo-190919664_457239017")
+            return
         if user.part == 1:
             self.handle_chating_user_message(user, message)
             return
-        stage, transferred = user.stage, user.stage_transferred
-        if stage >= len(self.stages):
-            self.api.messages.send(peer_id=user_id, message=strings['finished'],
-                                   random_id=get_random_id())
-            return
-        result = self.stages[stage].process(transferred, user_id, message_text)
-        if not transferred:
-            user.stage_transferred = True
-        if result == -7:
-            stage -= 1
-            if stage < 0:
-                stage = 0
-            else:
-                if user.results[-1] == '+':
-                    setattr(user, self.stages[stage - 1].parameter,
-                            getattr(user, self.stages[stage - 1].parameter) - 1)
-                user.results = user.results[:-1]
-            user.stage = stage
-            user.stage_transferred = True
-            self.session.commit()
-            self.stages[stage].process(False, user_id, message_text)
-            return
-        if result > 0:
-            user.stage += 1
-            if stage >= len(self.stages) - 1:
-                self.check_answers(user_id)
-                return
-            self.stages[stage + 1].process(False, user_id, "None")
-        self.session.commit()
+        try:
+            if user.chosen_image == -1 and 1 <= int(message_text) <= 10:
+                user.chosen_image = int(message_text)
+                user.part = 1
+                self.api.messages.send(peer_id=user.id, message=strings['passed_to_chat'],
+                                       random_id=get_random_id(),
+                                       keyboard=start_chat_keyboard.get_keyboard())
+                self.session.commit()
+        except Exception as exc:
+            pass
 
     def check_answers(self, user_id):
         user = self.session.query(User).filter_by(id=user_id).first()
@@ -200,3 +190,4 @@ class CharBot:
         vk_user = self.api.users.get(user_id=user_id)[0]
         new_user = User(id=user_id, first_name=vk_user['first_name'], last_name=vk_user['last_name'])
         self.session.add(new_user)
+        self.session.commit()
