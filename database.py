@@ -24,6 +24,17 @@ class User(Base):
     received_hello = Column(Boolean, default=False)
     in_chat = Column(Boolean, default=False)
     with_user = Column(Integer, default=-1)
+    need_rate = Column(Boolean, default=False)
+    last_conv = Column(Integer)
+
+
+class Chat(Base):
+    __tablename__ = "chats"
+    id = Column(Integer, primary_key=True)
+    first_user = Column(Integer)
+    second_user = Column(Integer)
+    rate_first_user = Column(Integer, default=1)
+    rate_second_user = Column(Integer, default=1)
 
 
 class Message(Base):

@@ -64,6 +64,12 @@ class CharBot:
                 user_first.with_user = user_second.id
                 user_second.in_chat = True
                 user_second.with_user = user_first.id
+                new_chat = Chat(first_user=user_first.id, second_user=user_second.id)
+                self.session.add(new_chat)
+                self.session.commit()
+                chat = self.session.query(Chat).filter_by(first_user=user_first.id, second_user=user_second.id).first()
+                user_first.last_conv = chat.id
+                user_second.last_conv = chat.id
                 self.api.messages.send(user_ids=[user_second.id, user_first.id],
                                        message="Отлично, мы нашли вам собеседника! Общайтесь:)",
                                        random_id=get_random_id(), keyboard=end_chat_keyboard.get_keyboard())
@@ -106,19 +112,37 @@ class CharBot:
 
     def handle_chating_user_message(self, user, message):
         text = message['text']
+        if user.need_rate:
+            try:
+                int(text)
+            except Exception:
+                return
+            if 1 <= int(text) <= 10:
+                chat = self.session.query(Chat).filter_by(id=user.last_conv)
+                user.need_rate = False
+                if user.id == chat.first().first_user:
+                    chat.update({'rate_first_user': int(text)})
+                else:
+                    chat.update({'rate_second_user': int(text)})
+                self.session.commit()
+                self.api.messages.send(peer_id=user.id, message="Спасибо за оценку! Попутного ветра в чатах:)",
+                                       random_id=get_random_id(), keyboard=start_chat_keyboard.get_keyboard())
+                return
+
         if not user.in_chat and text == "Начать чат":
             self.api.messages.send(peer_id=user.id, message="Подожди, пока мы подберем тебе собеседника!",
                                    random_id=get_random_id(), keyboard=VkKeyboard.get_empty_keyboard())
             self.waiting_users.append(user)
         if str(text).capitalize() == "Завершить чат":
             self.api.messages.send(peer_id=user.id, random_id=get_random_id(),
-                                   message="Завершаю чат. Когда надумаешь - напиши `Начать чат`, или нажми "
-                                           "соответствующую кнопку",
+                                   message=strings['you_end_conv'],
                                    keyboard=start_chat_keyboard.get_keyboard())
             self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
                                    message=strings['teammate_end_conv'], keyboard=start_chat_keyboard.get_keyboard())
             user_with = self.session.query(User).filter_by(id=user.with_user).first()
             user_with.in_chat = False
+            user_with.need_rate = True
+            user.need_rate = True
             user.in_chat = False
             self.session.commit()
         if user.in_chat:
