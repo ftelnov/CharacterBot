@@ -19,6 +19,9 @@ class User(Base):
     stage_transferred = Column(Boolean, default=False)
     results = Column(String, default="")
     need_renew = Column(Boolean, default=False)
+    part = Column(Integer, default=0)
+    in_chat = Column(Boolean, default=False)
+    with_user = Column(Integer, default=-1)
 
 
 class Message(Base):
