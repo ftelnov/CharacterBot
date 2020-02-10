@@ -1,3 +1,1 @@
-while timeout -k 21600 "python3 main.py"; do
-   sleep 2
-done
+ssh root@213.159.211.140 'bash -s' < reload.sh
