@@ -63,7 +63,7 @@ class CharBot:
     def match_users(self):
         while True:
             while len(self.waiting_users) >= 2:
-                first, second = random.sample(range(0, len(self.waiting_users)), 2)
+                first, second = 0, random.randint(1, len(self.waiting_users) - 1)
                 user_first, user_second = self.session.query(User).filter_by(
                     id=self.waiting_users[first]).first(), self.session.query(User).filter_by(
                     id=self.waiting_users[second]).first()
