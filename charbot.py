@@ -11,6 +11,7 @@ import random
 from requests.adapters import HTTPAdapter
 
 
+# test
 class MyHTTPAdapter(HTTPAdapter):
     def __init__(self, *args, **kwargs):
         super(MyHTTPAdapter, self).__init__(*args, **kwargs)
