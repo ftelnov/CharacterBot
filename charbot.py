@@ -37,6 +37,15 @@ start_chat_keyboard.add_button("Начать чат", color="positive")
 end_chat_keyboard = VkKeyboard()
 end_chat_keyboard.add_button("Завершить чат", color="negative")
 
+leave_queue_keyboard = VkKeyboard()
+leave_queue_keyboard.add_button("Выйти из очереди", color="negative")
+
+numbers_keyboard = VkKeyboard()
+for i in range(1, 11):
+    numbers_keyboard.add_button(str(i), "default")
+    if (i + 1) % 4 == 0:
+        numbers_keyboard.add_line()
+
 
 class CharBot:
     longPoll = None
@@ -56,8 +65,8 @@ class CharBot:
             while len(self.waiting_users) >= 2:
                 first, second = random.sample(range(0, len(self.waiting_users)), 2)
                 user_first, user_second = self.session.query(User).filter_by(
-                    id=self.waiting_users[first].id).first(), self.session.query(User).filter_by(
-                    id=self.waiting_users[second].id).first()
+                    id=self.waiting_users[first]).first(), self.session.query(User).filter_by(
+                    id=self.waiting_users[second]).first()
                 self.waiting_users.pop(first)
                 self.waiting_users.pop(second - 1)
                 user_first.in_chat = True
@@ -99,19 +108,13 @@ class CharBot:
         self.process = multiprocessing.Process(target=self.match_users)
         self.process.start()
 
-    def clean_user_data(self, user_id):
-        user = self.session.query(User).filter_by(id=user_id).first()
-        user.need_renew = False
-        user.extroversion = 0
-        user.neurotism = 0
-        user.stage = 2
-        user.lie = 0
-        user.results = ""
-        user.stage_transferred = False
-        self.session.commit()
-
     def handle_chating_user_message(self, user, message):
-        text = message['text']
+        text = message['text'].lower()
+        if user.id in self.waiting_users and text == "выйти из очереди":
+            self.waiting_users.remove(user.id)
+            self.api.messages.send(peer_id=user.id, message=strings['discard_search'], random_id=get_random_id(),
+                                   keyboard=start_chat_keyboard.get_keyboard())
+            return
         if user.need_rate:
             try:
                 int(text)
@@ -121,24 +124,24 @@ class CharBot:
                 chat = self.session.query(Chat).filter_by(id=user.last_conv)
                 user.need_rate = False
                 if user.id == chat.first().first_user:
-                    chat.update({'rate_first_user': int(text)})
+                    chat.rate_first_user = int(text)
                 else:
-                    chat.update({'rate_second_user': int(text)})
+                    chat.rate_second_user = int(text)
                 self.session.commit()
                 self.api.messages.send(peer_id=user.id, message="Спасибо за оценку! Попутного ветра в чатах:)",
                                        random_id=get_random_id(), keyboard=start_chat_keyboard.get_keyboard())
                 return
 
-        if not user.in_chat and text == "Начать чат":
+        if not user.in_chat and text == "начать чат":
             self.api.messages.send(peer_id=user.id, message="Подожди, пока мы подберем тебе собеседника!",
-                                   random_id=get_random_id(), keyboard=VkKeyboard.get_empty_keyboard())
-            self.waiting_users.append(user)
-        if str(text).capitalize() == "Завершить чат":
+                                   random_id=get_random_id(), keyboard=leave_queue_keyboard.get_keyboard())
+            self.waiting_users.append(user.id)
+        if text == "завершить чат":
             self.api.messages.send(peer_id=user.id, random_id=get_random_id(),
                                    message=strings['you_end_conv'],
-                                   keyboard=start_chat_keyboard.get_keyboard())
+                                   keyboard=numbers_keyboard.get_keyboard())
             self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
-                                   message=strings['teammate_end_conv'], keyboard=start_chat_keyboard.get_keyboard())
+                                   message=strings['teammate_end_conv'], keyboard=numbers_keyboard.get_keyboard())
             user_with = self.session.query(User).filter_by(id=user.with_user).first()
             user_with.in_chat = False
             user_with.need_rate = True
@@ -168,16 +171,16 @@ class CharBot:
     def message_new_handle(self, obj):
         message = obj['message']
         user_id = int(message['from_id'])
-        message_text = message['text']
+        message_text = message['text'].lower()
         user = self.session.query(User).filter_by(id=user_id).first()
         if user is None:
             self.init_user(user_id)
             user = self.session.query(User).filter_by(id=user_id).first()
-        if not user.received_hello and message_text == "Начать":
+        if not user.received_hello and (message_text == "начать" or message == "start"):
             user.received_hello = True
             self.session.commit()
             self.api.messages.send(peer_id=user.id, message=strings['lets_start'], random_id=get_random_id(),
-                                   attachment="photo-190919664_457239017")
+                                   attachment="photo-190919664_457239017", keyboard=numbers_keyboard.get_keyboard())
             return
         if user.part == 1:
             self.handle_chating_user_message(user, message)
@@ -192,39 +195,6 @@ class CharBot:
                 self.session.commit()
         except Exception as exc:
             pass
-
-    def check_answers(self, user_id):
-        user = self.session.query(User).filter_by(id=user_id).first()
-        extroversion, neurotism, lie = user.extroversion, user.neurotism, user.lie
-        if lie > 4:
-            keyboard = VkKeyboard(one_time=False)
-            keyboard.add_button("Повторить", "primary")
-            self.api.messages.send(peer_id=user_id,
-                                   message=strings['high_lie'],
-                                   random_id=get_random_id(), keyboard=keyboard.get_keyboard())
-            user.need_renew = True
-            self.session.commit()
-            return
-        user.part = 1
-        self.session.commit()
-        result = ""
-        extro = user.extroversion
-        neuro = user.neurotism
-        for level in ranges_extro:
-            first, second = level
-            if first < extro <= second:
-                result += strings["your_level_extro"] + ranges_extro[level] + ". "
-                break
-        for level in ranges_neuro:
-            first, second = level
-            if first < neuro <= second:
-                result += strings["your_level_neuro"] + ranges_neuro[level] + ". Спасибо за участие. Сейчас ты можешь " \
-                                                                              "початиться с пользователями в " \
-                                                                              "анонимном режиме:)"
-        keyboard = VkKeyboard()
-        keyboard.add_button("Начать чат", color="positive")
-        self.api.messages.send(peer_id=user_id, message=result, random_id=get_random_id(),
-                               keyboard=keyboard.get_keyboard())
 
     # Метод для инициализации юзера(с дефолт. параметрами)
     def init_user(self, user_id):
