@@ -146,7 +146,24 @@ class CharBot:
             user.in_chat = False
             self.session.commit()
         if user.in_chat:
-            self.api.messages.send(peer_id=user.with_user, message=text, attachment=message['attachment'], random_id=get_random_id())
+            attachments = []
+            sticker = None
+            for item in message['attachments']:
+                if item['type'] == 'sticker':
+                    sticker = item['sticker']['sticker_id']
+                    break
+                if item['type'] == 'photo':
+                    attachments.append('photo{owner_id}_{media_id}'.format(owner_id=item['photo']['owner_id'],
+                                                                           media_id=item['photo']['id']))
+                if item['type'] == 'video':
+                    attachments.append('video{owner_id}_{media_id}'.format(owner_id=item['video']['owner_id'],
+                                                                           media_id=item['video']['id']))
+            if sticker is not None:
+                self.api.messages.send(peer_id=user.with_user, sticker_id=sticker,
+                                       random_id=get_random_id())
+            else:
+                self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(), attachment=attachments,
+                                       message=text)
 
     def message_new_handle(self, obj):
         message = obj['message']
