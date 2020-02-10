@@ -146,7 +146,7 @@ class CharBot:
             user.in_chat = False
             self.session.commit()
         if user.in_chat:
-            self.api.messages.send(peer_id=user.with_user, message=text, random_id=get_random_id())
+            self.api.messages.send(peer_id=user.with_user, message=text, attachment=message['attachment'], random_id=get_random_id())
 
     def message_new_handle(self, obj):
         message = obj['message']
