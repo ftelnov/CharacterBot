@@ -157,18 +157,19 @@ class CharBot:
                     if item['type'] == 'sticker':
                         sticker = item['sticker']['sticker_id']
                         break
-                    if item['type'] == 'photo':
-                        attachments.append('photo{owner_id}_{media_id}'.format(owner_id=item['photo']['owner_id'],
-                                                                               media_id=item['photo']['id']))
-                    if item['type'] == 'video':
-                        attachments.append('video{owner_id}_{media_id}'.format(owner_id=item['video']['owner_id'],
-                                                                               media_id=item['video']['id']))
+                    att_type = item['type']
+                    attachments.append(
+                        '{type}{owner_id}_{media_id}'.format(type=att_type, owner_id=item[att_type]['owner_id'],
+                                                             media_id=item[att_type]['id']))
                 if sticker is not None:
                     self.api.messages.send(peer_id=user.with_user, sticker_id=sticker,
                                            random_id=get_random_id())
                 else:
-                    self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(), attachment=attachments,
-                                           message=text)
+                    if text == "":
+                        text = "."
+                        self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
+                                               attachment=attachments,
+                                               message=text)
         except Exception as exc:
             print(exc)
 
