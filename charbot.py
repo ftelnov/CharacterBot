@@ -165,11 +165,12 @@ class CharBot:
                     self.api.messages.send(peer_id=user.with_user, sticker_id=sticker,
                                            random_id=get_random_id())
                 else:
-                    if text == "":
-                        text = "."
+                    message_body = message['text']
+                    if message_body == "":
+                        message_body = "."
                     self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
                                                attachment=attachments,
-                                               message=text)
+                                               message=message_body)
         except Exception as exc:
             print(exc)
 
