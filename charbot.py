@@ -110,64 +110,67 @@ class CharBot:
         self.process.start()
 
     def handle_chating_user_message(self, user, message):
-        text = message['text'].lower()
-        if user.id in self.waiting_users and text == "выйти из очереди":
-            self.waiting_users.remove(user.id)
-            self.api.messages.send(peer_id=user.id, message=strings['discard_search'], random_id=get_random_id(),
-                                   keyboard=start_chat_keyboard.get_keyboard())
-            return
-        if user.need_rate:
-            try:
-                int(text)
-            except Exception:
+        try:
+            text = message['text'].lower()
+            if user.id in self.waiting_users and text == "выйти из очереди":
+                self.waiting_users.remove(user.id)
+                self.api.messages.send(peer_id=user.id, message=strings['discard_search'], random_id=get_random_id(),
+                                       keyboard=start_chat_keyboard.get_keyboard())
                 return
-            if 1 <= int(text) <= 10:
-                chat = self.session.query(Chat).filter_by(id=user.last_conv)
-                user.need_rate = False
-                if user.id == chat.first().first_user:
-                    chat.rate_first_user = int(text)
-                else:
-                    chat.rate_second_user = int(text)
-                self.session.commit()
-                self.api.messages.send(peer_id=user.id, message="Спасибо за оценку! Попутного ветра в чатах:)",
-                                       random_id=get_random_id(), keyboard=start_chat_keyboard.get_keyboard())
-                return
+            if user.need_rate:
+                try:
+                    int(text)
+                except Exception:
+                    return
+                if 1 <= int(text) <= 10:
+                    chat = self.session.query(Chat).filter_by(id=user.last_conv)
+                    user.need_rate = False
+                    if user.id == chat.first().first_user:
+                        chat.rate_first_user = int(text)
+                    else:
+                        chat.rate_second_user = int(text)
+                    self.session.commit()
+                    self.api.messages.send(peer_id=user.id, message="Спасибо за оценку! Попутного ветра в чатах:)",
+                                           random_id=get_random_id(), keyboard=start_chat_keyboard.get_keyboard())
+                    return
 
-        if not user.in_chat and text == "начать чат":
-            self.api.messages.send(peer_id=user.id, message="Подожди, пока мы подберем тебе собеседника!",
-                                   random_id=get_random_id(), keyboard=leave_queue_keyboard.get_keyboard())
-            self.waiting_users.append(user.id)
-        if text == "завершить чат":
-            self.api.messages.send(peer_id=user.id, random_id=get_random_id(),
-                                   message=strings['you_end_conv'],
-                                   keyboard=numbers_keyboard.get_keyboard())
-            self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
-                                   message=strings['teammate_end_conv'], keyboard=numbers_keyboard.get_keyboard())
-            user_with = self.session.query(User).filter_by(id=user.with_user).first()
-            user_with.in_chat = False
-            user_with.need_rate = True
-            user.need_rate = True
-            user.in_chat = False
-            self.session.commit()
-        if user.in_chat:
-            attachments = []
-            sticker = None
-            for item in message['attachments']:
-                if item['type'] == 'sticker':
-                    sticker = item['sticker']['sticker_id']
-                    break
-                if item['type'] == 'photo':
-                    attachments.append('photo{owner_id}_{media_id}'.format(owner_id=item['photo']['owner_id'],
-                                                                           media_id=item['photo']['id']))
-                if item['type'] == 'video':
-                    attachments.append('video{owner_id}_{media_id}'.format(owner_id=item['video']['owner_id'],
-                                                                           media_id=item['video']['id']))
-            if sticker is not None:
-                self.api.messages.send(peer_id=user.with_user, sticker_id=sticker,
-                                       random_id=get_random_id())
-            else:
-                self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(), attachment=attachments,
-                                       message=text)
+            if not user.in_chat and text == "начать чат":
+                self.api.messages.send(peer_id=user.id, message="Подожди, пока мы подберем тебе собеседника!",
+                                       random_id=get_random_id(), keyboard=leave_queue_keyboard.get_keyboard())
+                self.waiting_users.append(user.id)
+            if text == "завершить чат":
+                self.api.messages.send(peer_id=user.id, random_id=get_random_id(),
+                                       message=strings['you_end_conv'],
+                                       keyboard=numbers_keyboard.get_keyboard())
+                self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
+                                       message=strings['teammate_end_conv'], keyboard=numbers_keyboard.get_keyboard())
+                user_with = self.session.query(User).filter_by(id=user.with_user).first()
+                user_with.in_chat = False
+                user_with.need_rate = True
+                user.need_rate = True
+                user.in_chat = False
+                self.session.commit()
+            if user.in_chat:
+                attachments = []
+                sticker = None
+                for item in message['attachments']:
+                    if item['type'] == 'sticker':
+                        sticker = item['sticker']['sticker_id']
+                        break
+                    if item['type'] == 'photo':
+                        attachments.append('photo{owner_id}_{media_id}'.format(owner_id=item['photo']['owner_id'],
+                                                                               media_id=item['photo']['id']))
+                    if item['type'] == 'video':
+                        attachments.append('video{owner_id}_{media_id}'.format(owner_id=item['video']['owner_id'],
+                                                                               media_id=item['video']['id']))
+                if sticker is not None:
+                    self.api.messages.send(peer_id=user.with_user, sticker_id=sticker,
+                                           random_id=get_random_id())
+                else:
+                    self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(), attachment=attachments,
+                                           message=text)
+        except Exception as exc:
+            print(exc)
 
     def message_new_handle(self, obj):
         message = obj['message']
