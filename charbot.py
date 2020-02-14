@@ -167,7 +167,7 @@ class CharBot:
                 else:
                     if text == "":
                         text = "."
-                        self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
+                    self.api.messages.send(peer_id=user.with_user, random_id=get_random_id(),
                                                attachment=attachments,
                                                message=text)
         except Exception as exc:
